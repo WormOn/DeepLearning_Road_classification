@@ -1,8 +1,12 @@
-from __future__ import print_function
+rom __future__ import print_function
 
 import tensorflow as tf
 import os
 import numpy as np
+from scipy import misc
+import glob
+
+# https://github.com/tensorflow/tensorflow/blob/r0.11/tensorflow/models/image/cifar10/cifar10_input.py
 
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
@@ -33,23 +37,70 @@ def get_data_and_label():
     # step 3: read, decode and resize images
     reader = tf.WholeFileReader()
     filename, content = reader.read(filename_queue)
-    image = tf.image.decode_png(content, channels=1)
-    image = tf.cast(image, tf.float32)
+    image = tf.image.decode_png(content,channels=3)
     print(image)
+    #image = tf.image.resize_image_with_crop_or_pad(image,28,)
+    image = tf.cast(image, tf.float32)
+    #print(image)
     image = tf.image.resize_images(image, [28, 28])
     print(image)
     
     # step 4: Batching
-    image_batch = tf.train.batch([image], batch_size=1)
+    #image_batch = tf.train.batch([image], batch_size=1)
     
     data = np.array(image)
     label = np.array([0,1])
     
+    print("image np shape",data.shape)
+    print(" label shape", label.shape)
     result = []
     result.append(data)
     result.append(label)
     
     return result
+
+def png_to_np_array():
+    
+    # Read the image and convert it into numpy array of type uint8
+    image = misc.imread('images/8.png')
+    
+    #  have a look at the image 3D numpy with values between 0 and 255
+    #print(image[1, 1:10])
+    
+    # Get the dimensions of image for conversion
+    shape_vec = image.shape
+    reshaped_vec_size = 1
+    for i in range(len(shape_vec)):
+        reshaped_vec_size *= shape_vec[i]
+    #print('reshaped vec size :',reshaped_vec_size)
+    
+    # Convert it into a vector from [w,h,channels] -> w*h*channels
+    image = image.reshape((1,reshaped_vec_size))
+
+# Now convert the type from uint8 into float32
+image = image.astype(np.float32)
+    
+    # Normalize it to be between 0.0 and 1.0
+    image = image*1.0/255.0
+    
+    # cut the image for initial 28*28 pixels for now
+    cut_image = np.ones((1, 784), dtype=np.float32)
+    for i in range(784):
+        cut_image[0][i] = image[0][i];
+    #print(cut_image)
+
+    # Check the shape and the type of the image
+    #print(cut_image.shape)
+    #print(cut_image.dtype)
+
+    # label of type float32
+    label = np.ones((1, 10), dtype=np.float32)
+    # Send it in a result to the caller
+    result = []
+    result.append(cut_image)
+    result.append(label)
+
+return result
 
 #data = tf.image.decode_png("images/8.png",channels=3)
 #grey_image = tf.image.rgb_to_grayscale(data)
@@ -69,8 +120,8 @@ batch_size = 1
 display_step = 10
 
 # Network Parameters
-n_input = 784 # MNIST data input (img shape: 28*28)
-n_classes = 2 # MNIST total classes (0-9 digits)
+n_input = 28*28 # MNIST data input (img shape: 28*28)
+n_classes = 10 # MNIST total classes (0-9 digits)
 dropout = 0.00 # Dropout, probability to keep units
 
 # tf Graph input
@@ -166,23 +217,19 @@ with tf.Session() as sess:
     #while step * batch_size < training_iters:
     while step < 10:
         #while 1==0:
-        result = get_data_and_label()
+        result = png_to_np_array()
         batch_x = result[0]
         batch_y = result[1]
         print("before running optimizer : ",step)
+        print(batch_x.shape)
+        print(batch_y.shape)
         sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
         print_step(step)
         if step % display_step == 0:
             # Calculate batch loss and accuracy
-            loss, acc = sess.run([cost, accuracy], feed_dict={x: batch_x, y: batch_y,keep_prob: 1.})
+            loss, acc = sess.run([cost, accuracy], feed_dict={x: batch_x, y: batch_y})
             print("Iter " + str(step*batch_size) + ", Minibatch Loss= " + \
                   "{:.6f}".format(loss) + ", Training Accuracy= " + \
                   "{:.5f}".format(acc))
         step += 1
     print("Optimization Finished!")
-
-# Calculate accuracy for 256 mnist test images
-#print("Testing Accuracy:", \
-#    sess.run(accuracy, feed_dict={x: mnist.test.images[:256],
-#                                 y: mnist.test.labels[:256],
-#
