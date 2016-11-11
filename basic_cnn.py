@@ -1,4 +1,4 @@
-rom __future__ import print_function
+from __future__ import print_function
 
 import tensorflow as tf
 import os
@@ -94,7 +94,7 @@ image = image.astype(np.float32)
     #print(cut_image.dtype)
 
     # label of type float32
-    label = np.ones((1, 10), dtype=np.float32)
+    label = np.ones((1, 2), dtype=np.float32)
     # Send it in a result to the caller
     result = []
     result.append(cut_image)
@@ -121,13 +121,13 @@ display_step = 10
 
 # Network Parameters
 n_input = 28*28 # MNIST data input (img shape: 28*28)
-n_classes = 10 # MNIST total classes (0-9 digits)
+n_classes = 2 # MNIST total classes (0-9 digits)
 dropout = 0.00 # Dropout, probability to keep units
 
 # tf Graph input
 x = tf.placeholder(tf.float32, [None, n_input])
 y = tf.placeholder(tf.float32, [None, n_classes])
-keep_prob = tf.placeholder(tf.float32) #dropout (keep probability)
+#keep_prob = tf.placeholder(tf.float32) #dropout (keep probability)
 
 # Create some wrappers for simplicity
 def conv2d(x, W, b, strides=1):
@@ -142,7 +142,7 @@ def maxpool2d(x, k=2):
                           padding='SAME')
 
 # Create model
-def conv_net(x, weights, biases, dropout):
+def conv_net(x, weights, biases):
     # Reshape input picture
     print('Executing conv_net')
     x = tf.reshape(x, shape=[-1, 28, 28, 1])
@@ -167,7 +167,7 @@ def conv_net(x, weights, biases, dropout):
     print('Done with fc1 execution')
     
     # Apply Dropout
-    fc1 = tf.nn.dropout(fc1, dropout)
+    #fc1 = tf.nn.dropout(fc1, dropout)
     
     # Output, class prediction
     out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
@@ -196,7 +196,7 @@ biases = {
 }
 
 # Construct model
-pred = conv_net(x, weights, biases, keep_prob)
+pred = conv_net(x, weights, biases)
 
 # Define loss and optimizer
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred, y))
@@ -220,9 +220,7 @@ with tf.Session() as sess:
         result = png_to_np_array()
         batch_x = result[0]
         batch_y = result[1]
-        print("before running optimizer : ",step)
-        print(batch_x.shape)
-        print(batch_y.shape)
+        print("step : ",step)
         sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
         print_step(step)
         if step % display_step == 0:
@@ -233,3 +231,11 @@ with tf.Session() as sess:
                   "{:.5f}".format(acc))
         step += 1
     print("Optimization Finished!")
+
+#Calculate accuracy for the given test image
+list = png_to_np_array()
+    test_image = list[0]
+    test_label = list[1]
+    print("Testing Accuracy:", \
+          sess.run(accuracy, feed_dict={x: test_image,
+                   y: test_label}))
